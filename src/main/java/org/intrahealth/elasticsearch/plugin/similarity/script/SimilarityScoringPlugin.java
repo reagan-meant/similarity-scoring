@@ -27,6 +27,7 @@ import org.intrahealth.elasticsearch.plugin.similarity.MatcherService;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -128,8 +129,20 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
             if (params.containsKey("matchers") == false) {
                 throw new IllegalArgumentException("Missing parameter [matchers]");
             }
+            if (params.containsKey("method") == false) {
+                throw new IllegalArgumentException("Missing parameter [method]");
+            }
+            String method = String.valueOf(params.get("method"));
+            ArrayList<String> validMethods = new ArrayList<String>( Arrays.asList( "fellegi-sunter", "bayes" ) );
+            if ( !validMethods.contains( method ) ) {
+                throw new IllegalArgumentException("Invalid parameter.  Method can only be: fellegi-sunter or bayes.  Method is " 
+                        + method );
+            }
+            if (method.equals( "fellegi-sunter") && params.containsKey("baseScore") == false) {
+                throw new IllegalArgumentException("Missing parameter [baseScore] (because results can't be negative)");
+            }
             this.params = params;
-            this.matchers = MatcherModelParser.parseMatcherModels(params);
+            this.matchers = MatcherModelParser.parseMatcherModels(method, params);
             this.lookup = lookup;
         }
 
@@ -140,38 +153,63 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
 
         @Override
         public ScoreScript newInstance(LeafReaderContext ctx) throws IOException {
-            double NOT_SCORED = 2;
-            return new ScoreScript(params, lookup, ctx) {
 
-                @Override
-                public double execute(ExplanationHolder explanation) {
-                    double totalScore = NOT_SCORED;
-                    for (MatcherModel matcherModel : matchers) {
-                        String value = String.valueOf(lookup.source().get(matcherModel.fieldName));
-                        double score = matcherService.matchScore(matcherModel.matcherName, matcherModel.value, value);
-                        if (score > matcherModel.high) {
-                            score = matcherModel.high;
+            String method = String.valueOf(params.get("method"));
+            if ( method.equals( "fellegi-sunter" ) ) {
+
+                return new ScoreScript(params, lookup, ctx) {
+
+                    @Override
+                    public double execute(ExplanationHolder explanation) {
+                        double totalScore = (double) params.get("baseScore");
+                        for (MatcherModel matcherModel : matchers) {
+                            String value = String.valueOf(lookup.source().get(matcherModel.fieldName));
+                            double score = matcherService.matchScore(matcherModel.matcherName, matcherModel.value, value);
+                            if ( score >= matcherModel.threshold ) {
+                                totalScore += java.lang.Math.log10( matcherModel.mValue / matcherModel.uValue );
+                            } else {
+                                totalScore += java.lang.Math.log10( (1 - matcherModel.mValue) / (1 - matcherModel.uValue) );
+                            }
                         }
-                        if (score < matcherModel.low) {
-                            score = matcherModel.low;
-                        }
-                        totalScore = totalScore == NOT_SCORED ? score : combineScores(totalScore, score);
+                        return totalScore;
                     }
-                    ;
-                    return totalScore;
-                }
 
-                /**
-                 * From: https://github.com/larsga/Duke/blob/master/duke-core/src/main/java/no/priv/garshol/duke/utils/Utils.java
-                 * Combines two probabilities using Bayes' theorem. This is the
-                 * approach known as "naive Bayes", very well explained here:
-                 * http://www.paulgraham.com/naivebayes.html
-                 */
-                public double combineScores(double score1, double score2) {
-                    return (score1 * score2) / ((score1 * score2) + ((1.0 - score1) * (1.0 - score2)));
-                }
+                };
 
-            };
+            } else { // default to bayes, although the parameter checker should fail if it's not set
+                double NOT_SCORED = 2;
+                return new ScoreScript(params, lookup, ctx) {
+
+                    @Override
+                    public double execute(ExplanationHolder explanation) {
+                        double totalScore = NOT_SCORED;
+                        for (MatcherModel matcherModel : matchers) {
+                            String value = String.valueOf(lookup.source().get(matcherModel.fieldName));
+                            double score = matcherService.matchScore(matcherModel.matcherName, matcherModel.value, value);
+                            if (score > matcherModel.high) {
+                                score = matcherModel.high;
+                            }
+                            if (score < matcherModel.low) {
+                                score = matcherModel.low;
+                            }
+                            totalScore = totalScore == NOT_SCORED ? score : combineScores(totalScore, score);
+                        }
+                        return totalScore;
+                    }
+
+                    /**
+                    * From: https://github.com/larsga/Duke/blob/master/duke-core/src/main/java/no/priv/garshol/duke/utils/Utils.java
+                    * Combines two probabilities using Bayes' theorem. This is the
+                    * approach known as "naive Bayes", very well explained here:
+                    * http://www.paulgraham.com/naivebayes.html
+                    */
+                    public double combineScores(double score1, double score2) {
+                        return (score1 * score2) / ((score1 * score2) + ((1.0 - score1) * (1.0 - score2)));
+                    }
+    
+                };
+
+             }
         }
 
     }
@@ -207,14 +245,33 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
         private double low;
 
         /**
+         * The mValue for Fellegi-Sunter linkage. 
+         */
+        private double mValue;
+
+        /**
+         * The uValue for Fellegi-Sunter linkage. 
+         */
+        private double uValue;
+
+        /**
+         * The threshold to determine a match or not based on the string distance or similarity.
+         */
+        private double threshold;
+
+        /**
          * Constructs a new instance of a MatcherModel.
          */
-        MatcherModel(String fieldName, Object value, String matcherName, double high, double low) {
+        MatcherModel(String fieldName, Object value, String matcherName, double high, double low, 
+                double mValue, double uValue, double threshold) {
             this.fieldName = fieldName;
             this.value = String.valueOf(value);
             this.matcherName = matcherName;
             this.high = high;
             this.low = low;
+            this.mValue = mValue;
+            this.uValue = uValue;
+            this.threshold = threshold;
         }
 
     }
@@ -227,40 +284,71 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
         private static String FIELD = "field";
         private static String VALUE = "value";
         private static String MATCHER = "matcher";
+        /* For Bayes method */
         private static String HIGH = "high";
         private static String LOW = "low";
+        /* For Fellegi-Sunter method */
+        private static String MVALUE = "mValue";
+        private static String UVALUE = "uValue";
+        private static String THRESHOLD = "threshold";
 
         @SuppressWarnings("unchecked")
-        public static List<MatcherModel> parseMatcherModels(Map<String, Object> params) {
+        public static List<MatcherModel> parseMatcherModels(String method, Map<String, Object> params) {
             List<MatcherModel> matcherModels = new ArrayList<>();
             List<Map<String, Object>> script = (List<Map<String, Object>>) params.get("matchers");
             script.forEach(entry -> {
-                checkMatcherConfiguration(entry);
+                checkMatcherConfiguration(method, entry);
                 String fieldName = String.valueOf(entry.get(FIELD));
                 String value = String.valueOf(entry.get(VALUE));
                 String matcherName = String.valueOf(entry.get(MATCHER));
-                double high = (double) entry.get(HIGH);
-                double low = (double) entry.get(LOW);
-                matcherModels.add(new MatcherModel(fieldName, value, matcherName, high, low));
+                double high, low, mValue, uValue, threshold;
+                if ( method.equals("fellegi-sunter" ) ) {
+                    mValue = (double) entry.get(MVALUE);
+                    uValue = (double) entry.get(UVALUE);
+                    threshold = (double) entry.get(THRESHOLD);
+                    high = low = 0.0;
+                } else { // default to bayes, although an error should be thrown if it's not set
+                    high = (double) entry.get(HIGH);
+                    low = (double) entry.get(LOW);
+                    mValue = uValue = threshold = 0.0;
+                }
+                matcherModels.add(new MatcherModel(fieldName, value, matcherName, high, low, mValue, uValue, threshold));
             });
             return matcherModels;
         }
 
-        private static void checkMatcherConfiguration(Map<String, Object> entry) {
+        private static void checkMatcherConfiguration(String method, Map<String, Object> entry) {
             if (!entry.containsKey(FIELD)) {
-                throw new IllegalArgumentException("Invalid matcher configuration. Missing: [" + FIELD + "] property.");
+                throw new IllegalArgumentException("Invalid matcher configuration (" + method + "). Missing: [" + FIELD + "] property.");
             }
             if (!entry.containsKey(VALUE)) {
-                throw new IllegalArgumentException("Invalid matcher configuration. Missing: [" + VALUE + "] property.");
+                throw new IllegalArgumentException("Invalid matcher configuration (" + method + "). Missing: [" + VALUE + "] property.");
             }
             if (!entry.containsKey(MATCHER)) {
-                throw new IllegalArgumentException("Invalid matcher configuration. Missing: [" + MATCHER + "] property.");
+                throw new IllegalArgumentException("Invalid matcher configuration (" + method + "). Missing: [" + MATCHER + "] property.");
             }
-            if (!entry.containsKey(HIGH)) {
-                throw new IllegalArgumentException("Invalid matcher configuration. Missing: [" + HIGH + "] property.");
-            }
-            if (!entry.containsKey(LOW)) {
-                throw new IllegalArgumentException("Invalid matcher configuration. Missing: [" + LOW + "] property.");
+            if ( method.equals( "fellegi-sunter" ) ) {
+                if (!entry.containsKey(THRESHOLD)) {
+                    throw new IllegalArgumentException("Invalid matcher configuration for fellegi-sunter (" + method + "). Missing: [" 
+                            + THRESHOLD + "] property.");
+                }
+                if (!entry.containsKey(MVALUE)) {
+                    throw new IllegalArgumentException("Invalid matcher configuration for fellegi-sunter (" + method + "). Missing: [" 
+                            + MVALUE + "] property.");
+                }
+                if (!entry.containsKey(UVALUE)) {
+                    throw new IllegalArgumentException("Invalid matcher configuration for fellegi-sunter (" + method + "). Missing: [" 
+                            + UVALUE + "] property.");
+                }
+            } else { // default to bayes, although it should error if not set before here
+                if (!entry.containsKey(HIGH)) {
+                    throw new IllegalArgumentException("Invalid matcher configuration for bayes (" + method + "). Missing: [" 
+                            + HIGH + "] property.");
+                }
+                if (!entry.containsKey(LOW)) {
+                    throw new IllegalArgumentException("Invalid matcher configuration for bayes (" + method + "). Missing: [" 
+                            + LOW + "] property.");
+                }
             }
         }
 
