@@ -51,6 +51,7 @@ curl -X POST "localhost:9200/patients/_search?pretty=true" -H
               "source": "string_similarity",
               "lang" : "similarity_scripts",
               "params": {
+                "method": "bayes",
                 "matchers": [{
                   "field": "given",
                   "value": "Alis",
@@ -67,6 +68,45 @@ curl -X POST "localhost:9200/patients/_search?pretty=true" -H
   }
 }'
 ```
+To combine scores using Fellegi-Sunter you need to have m and u values for the fields as well
+as a baseScore parameter because ElasticSearch doesn't allow negative scores.  The baseScore
+should be the minimum for the min_score on the query but it should be adjusted higher based
+on your selection criteria.
+```bash
+curl -X POST "localhost:9200/patients/_search?pretty=true" -H
+'Content-Type: application/json' -d'{
+  "query": {
+    "function_score": {
+      "query": {
+        "match_all": {}
+      },
+      "functions": [
+        {
+          "script_score": {
+            "script": {
+              "source": "string_similarity",
+              "lang" : "similarity_scripts",
+              "params": {
+                "method": "fellegi-sunter",
+                "baseScore": 100.0
+                "matchers": [{
+                  "field": "given",
+                  "value": "Alis",
+                  "matcher": "jaro-winkler",
+                  "threshold": 0.9,
+                  "mValue": 0.95736,
+                  "uValue": 0.0003415
+                }]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}'
+```
+
 
 The matchers key contains an array of all fields to be searched, configured with the
 appropriate field name, value, algorithm and high and low values.
