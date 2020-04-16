@@ -11,7 +11,7 @@ The plugin currently supports these algorithms.  See the above library for more 
 * Distance algorithms define the distance between strings so 0 is a perfect match.
 * Similarity algorithms define the similarty of strings so 0 means the strings are completely different.
 
-Matcher | Algorithm | Type | Normalized?
+Matcher Parameter for Query| Algorithm | Type | Normalized?
 ---|---|---|---
 cosine-similarity | Cosine | similarity | yes
 dice-similarity | Sorensen-Dice | similarity | yes
@@ -24,6 +24,7 @@ damerau-levenshtein | Damerau-Levenshtein | distance | no
 dice-distance | Sorensen-Dice | distance | yes
 jaccard-distance | Jaccard | distance | yes
 jaro-winkler-distance | Jaro-Winkler | distance | yes
+levenshtein | Levenshtein | distance | no
 longest-common-subsequence | Longest Common Subsequence | distance | no
 metric-lcs | Metric Longest Common Subsequence | distance | yes
 ngram | N-Gram | distance | yes
