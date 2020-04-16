@@ -5,14 +5,32 @@ An Elasticsearch plugin for scoring documents based on string similarity
 The Elasticsearch plugin  relies on the https://github.com/tdebatty/java-string-similarity library. 
 The library is fullyopen source and publicly hosted on Github under the MIT licence. 
 
-The plugin currently supports these algorithms:
+The plugin currently supports these algorithms.  See the above library for more details.
 
-1. Cosine similarity (cosine)
-1. Jaccard index (jaccard)
-1. Jaro-Winkler (jaro-winkler)
-1. Longest Common Subsequence (longest-common-subsequence)
-1. Normalized Levenshtein (levenshtein)
-1. Sorensen-Dice coefficient (dice)
+* Normalized algorithms return results between 0.0 and 1.0 and usually allow both distance and similarity scores.
+* Distance algorithms define the distance between strings so 0 is a perfect match.
+* Similarity algorithms define the similarty of strings so 0 means the strings are completely different.
+
+Matcher | Algorithm | Type | Normalized?
+---|---|---|---
+cosine-similarity | Cosine | similarity | yes
+cosine-distance | Cosine | distance | yes
+damerau-levenshtein | Damerau-Levenshtein | distance | no
+dice-similarity | Sorensen-Dice | similarity | yes
+dice-distance | Sorensen-Dice | distance | yes
+jaccard-similarity | Jaccard | similarity | yes
+jaccard-distance | Jaccard | distance | yes
+jaro-winkler-similarity | Jaro-Winkler | similarity | yes
+jaro-winkler-distance | Jaro-Winkler | distance | yes
+longest-common-subsequence | Longest Common Subsequence | distance | no
+metric-lcs | Metric Longest Common Subsequence | distance | yes
+ngram | N-Gram | distance | yes
+normalized-lcs-similarity | Normalized Longest Common Subsequence | similarity | yes
+normalized-lcs-distance | Normalized Longest Common Subsequence | distance | yes
+normalized-levenshtein-similarity | Normalized Levenshtein | similarity | yes
+normalized-levenshtein-distance | Normalized Levenshtein | distance | yes
+optimal-string-alignment | Optimal String Alignment | distance | no
+qgram | Q-Gram | distance | no
 
 ## Building
 The plugin can be built with Java 13 with the following command:
@@ -71,7 +89,8 @@ curl -X POST "localhost:9200/patients/_search?pretty=true" -H
 To combine scores using Fellegi-Sunter you need to have m and u values for the fields as well
 as a baseScore parameter because ElasticSearch doesn't allow negative scores.  The baseScore
 should be the minimum for the min_score on the query but it should be adjusted higher based
-on your selection criteria.
+on your selection criteria.  For similiarty comparisons, the score must be higher than the 
+threshold given.  For distance comparisons, the score must be lower than the threshold given.
 ```bash
 curl -X POST "localhost:9200/patients/_search?pretty=true" -H
 'Content-Type: application/json' -d'{
