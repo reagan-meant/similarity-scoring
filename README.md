@@ -113,12 +113,12 @@ appropriate field name, value, algorithm, score_mode and additional parameters b
 
 Parameter | Description
 ---|---
-field | The field to be searched e.g. “ given ”.
-value | The search term e.g. “ Alis ”.
-matcher | The algorithm to use for matching e.g. “ jaro-winkler ”.
+field | The field to be searched e.g. "given".
+value | The search term e.g. "Alis".
+matcher | The algorithm to use for matching e.g. "jaro-winkler-similarity".
 score_mode | How to combine scores for multiple matchers/fields.  The options are:  fellegi-sunter, bayes, multiply, or add.
 high | The score to be assigned to a string that matches the search term perfectly.  Applies to the bayes score_mode.
 low | The score to be assigned to a string that does not match the search term at all.  Applies to the bayes score_mode.
 threshold | The threshold for the field being a match for the fellegi-sunter score_mode.
-m_value | The ''m'' value for the field for the fellegi-sunter score_mode.
-u_value | The ''u'' value for the field for the fellegi-sunter score_mode.
+m_value | The *m* value for the field for the fellegi-sunter score_mode.
+u_value | The *u* value for the field for the fellegi-sunter score_mode.
