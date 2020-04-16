@@ -41,22 +41,22 @@ setup:
                       source: "string_similarity"
                       lang: "similarity_scripts"
                       params:
-                        method: "fellegi-sunter"
-                        baseScore: 100.0
+                        score_mode: "fellegi-sunter"
+                        base_score: 100.0
                         matchers: [{
                           field: "name",
                           value: "jne doe",
-                          matcher: "jaro-winkler",
+                          matcher: "jaro-winkler-similarity",
                           threshold: 0.80,
-                          mValue: 0.95,
-                          uValue: 0.000034
+                          m_value: 0.95,
+                          u_value: 0.000034
                         },{
                           field: "address",
                           value: "ABC Street",
-                          matcher: "jaro-winkler",
+                          matcher: "jaro-winkler-similarity",
                           threshold: 0.80,
-                          mValue: 0.85,
-                          uValue: 0.000034
+                          m_value: 0.85,
+                          u_value: 0.000034
                         }]
 
   - length: { hits.hits: 3 }

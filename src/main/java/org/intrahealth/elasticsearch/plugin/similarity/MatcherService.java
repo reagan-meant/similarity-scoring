@@ -14,12 +14,21 @@
 package org.intrahealth.elasticsearch.plugin.similarity;
 
 import info.debatty.java.stringsimilarity.Cosine;
+import info.debatty.java.stringsimilarity.Damerau;
 import info.debatty.java.stringsimilarity.Jaccard;
 import info.debatty.java.stringsimilarity.JaroWinkler;
+import info.debatty.java.stringsimilarity.Levenshtein;
 import info.debatty.java.stringsimilarity.LongestCommonSubsequence;
+import info.debatty.java.stringsimilarity.MetricLCS;
+import info.debatty.java.stringsimilarity.NGram;
 import info.debatty.java.stringsimilarity.NormalizedLevenshtein;
+import info.debatty.java.stringsimilarity.OptimalStringAlignment;
+import info.debatty.java.stringsimilarity.QGram;
 import info.debatty.java.stringsimilarity.SorensenDice;
 import info.debatty.java.stringsimilarity.interfaces.NormalizedStringSimilarity;
+import info.debatty.java.stringsimilarity.interfaces.NormalizedStringDistance;
+import info.debatty.java.stringsimilarity.interfaces.StringDistance;
+import info.debatty.java.stringsimilarity.interfaces.StringSimilarity;
 
 import java.util.HashMap;
 import java.util.Locale;
@@ -31,10 +40,34 @@ import java.util.Map;
  */
 public class MatcherService {
 
+    private interface Scorer {
+        double score(String left, String right);
+    }
+
+    private static class StringComparisonMatcher {
+        private StringDistance distanceMatcher;
+        private StringSimilarity similarityMatcher;
+        private Scorer scorer;
+
+        StringComparisonMatcher( StringSimilarity matcher ) {
+            this.similarityMatcher = matcher;
+            this.scorer = (String left, String right) -> this.similarityMatcher.similarity( left, right );
+        }
+
+        StringComparisonMatcher( StringDistance matcher ) {
+            this.distanceMatcher = matcher;
+            this.scorer = (String left, String right) -> this.distanceMatcher.distance( left, right );
+        }
+
+        public double score( String left, String right ) {
+            return scorer.score( left, right );
+        }
+    }
+
     /**
      * A cache for any matchers that we've already loaded so that we do not need to load them each time.
      */
-    private Map<String, NormalizedStringSimilarity> matchers = new HashMap<>();
+    private Map<String, StringComparisonMatcher> matchers = new HashMap<>();
 
     /**
      * Select the right matcher by its name, match the two strings provided and then return the match score. Passing
@@ -47,36 +80,149 @@ public class MatcherService {
      * @return the match score.
      */
     public double matchScore(String matcherName, String left, String right) {
-        NormalizedStringSimilarity matcher = getMatcher(matcherName);
-        return matcher.similarity(left.trim().toLowerCase(Locale.getDefault()), right.trim().toLowerCase(Locale.getDefault()));
+        StringComparisonMatcher matcher = getMatcher(matcherName);
+        return matcher.score(left.trim().toLowerCase(Locale.getDefault()), right.trim().toLowerCase(Locale.getDefault()));
+    }
+
+    /**
+     * Check if the given matcher name is a distance measure.
+     *
+     * @param matcherName the name of the matcher to use.
+     *
+     * @return boolean
+     */
+    public boolean isDistance(String matcherName) {
+        return !isSimilarity(matcherName);
+        /*
+        switch (matcherName) {
+            case "levenshtein":
+            case "normalized-levenshtein-distance":
+            case "damerau-levenshtein":
+            case "optimal-string-alignment":
+            case "longest-common-subsequence":
+            case "normalized-lcs-distance":
+            case "metric-lcs":
+            case "ngram":
+            case "qgram":
+            case "cosine-distance":
+            case "dice-distance":
+            case "jaccard-distance":
+                return true;
+                break;
+            default:
+                return false;
+                break;
+        }
+        */
+    }
+
+    /**
+     * Check if the given matcher name is a similarity measure.
+     *
+     * @param matcherName the name of the matcher to use.
+     *
+     * @return boolean
+     */
+    public boolean isSimilarity(String matcherName) {
+        switch (matcherName) {
+            case "cosine-similarity":
+            case "dice-similarity":
+            case "jaccard-similarity":
+            case "jaro-winkler-similarity":
+            case "normalized-levenshtein-similarity":
+            case "normalized-lcs-similarity":
+                return true;
+            default:
+                return false;
+         }
     }
 
     /*
      * Get a matcher by its name from the cache. If the matcher is not already in the cache, load it, place it in the
      * cache and then return it.
      */
-    private NormalizedStringSimilarity getMatcher(String matcherName) {
+    private StringComparisonMatcher getMatcher(String matcherName) {
         if (matchers.containsKey(matcherName)) {
             return matchers.get(matcherName);
         }
+        StringSimilarity simMatcher;
+        StringDistance disMatcher;
         switch (matcherName) {
-            case "cosine":
-                matchers.put(matcherName, new Cosine());
+            case "cosine-similarity":
+                simMatcher = new Cosine();
+                matchers.put(matcherName, new StringComparisonMatcher(simMatcher));
                 break;
-            case "dice":
-                matchers.put(matcherName, new SorensenDice());
+            case "dice-similarity":
+                simMatcher = new SorensenDice();
+                matchers.put(matcherName, new StringComparisonMatcher(simMatcher));
                 break;
-            case "jaccard":
-                matchers.put(matcherName, new Jaccard());
+            case "jaccard-similarity":
+                simMatcher = new Jaccard();
+                matchers.put(matcherName, new StringComparisonMatcher(simMatcher));
                 break;
-            case "jaro-winkler":
-                matchers.put(matcherName, new JaroWinkler());
+            case "jaro-winkler-similarity":
+                simMatcher = new JaroWinkler();
+                matchers.put(matcherName, new StringComparisonMatcher(simMatcher));
+                break;
+            case "normalized-levenshtein-similarity":
+                simMatcher = new NormalizedLevenshtein();
+                matchers.put(matcherName, new StringComparisonMatcher(simMatcher));
+                break;
+            case "normalized-lcs-similarity":
+                simMatcher = new NormalizedLongestCommonSubsequence();
+                matchers.put(matcherName, new StringComparisonMatcher(simMatcher));
                 break;
             case "levenshtein":
-                matchers.put(matcherName, new NormalizedLevenshtein());
+                disMatcher = new Levenshtein();
+                matchers.put(matcherName, new StringComparisonMatcher(disMatcher));
+                break;
+            case "normalized-levenshtein-distance":
+                disMatcher = new NormalizedLevenshtein();
+                matchers.put(matcherName, new StringComparisonMatcher(disMatcher));
+                break;
+            case "damerau-levenshtein":
+                disMatcher = new Damerau();
+                matchers.put(matcherName, new StringComparisonMatcher(disMatcher));
+                break;
+            case "optimal-string-alignment":
+                disMatcher = new OptimalStringAlignment();
+                matchers.put(matcherName, new StringComparisonMatcher(disMatcher));
+                break;
+            case "jaro-winkler-distance":
+                disMatcher = new JaroWinkler();
+                matchers.put(matcherName, new StringComparisonMatcher(disMatcher));
                 break;
             case "longest-common-subsequence":
-                matchers.put(matcherName, new NormalizedLongestCommonSubsequenceSimilarity());
+                disMatcher = new LongestCommonSubsequence();
+                matchers.put(matcherName, new StringComparisonMatcher(disMatcher));
+                break;
+            case "normalized-lcs-distance":
+                disMatcher = new NormalizedLongestCommonSubsequence();
+                matchers.put(matcherName, new StringComparisonMatcher(disMatcher));
+                break;
+            case "metric-lcs":
+                disMatcher = new MetricLCS();
+                matchers.put(matcherName, new StringComparisonMatcher(disMatcher));
+                break;
+            case "ngram":
+                disMatcher = new NGram();
+                matchers.put(matcherName, new StringComparisonMatcher(disMatcher));
+                break;
+            case "qgram":
+                disMatcher = new QGram();
+                matchers.put(matcherName, new StringComparisonMatcher(disMatcher));
+                break;
+            case "cosine-distance":
+                disMatcher = new Cosine();
+                matchers.put(matcherName, new StringComparisonMatcher(disMatcher));
+                break;
+            case "dice-distance":
+                disMatcher = new SorensenDice();
+                matchers.put(matcherName, new StringComparisonMatcher(disMatcher));
+                break;
+            case "jaccard-distance":
+                disMatcher = new Jaccard();
+                matchers.put(matcherName, new StringComparisonMatcher(disMatcher));
                 break;
             default:
                 throw new IllegalArgumentException("The matcher [" + matcherName + "] is not supported.");
@@ -86,17 +232,23 @@ public class MatcherService {
     }
 
     /*
-     * This class exists to "flip" the result returned by the @{@link LongestCommonSubsequence} since it returns the
-     * distance rather than then similarity between the two input strings.
+     * This class exists to normalize the result returned by the @{@link LongestCommonSubsequence} 
+     * and also "flip" for the similarity between the two input strings.
      */
-    private static class NormalizedLongestCommonSubsequenceSimilarity implements NormalizedStringSimilarity {
+    private static class NormalizedLongestCommonSubsequence implements NormalizedStringSimilarity, NormalizedStringDistance {
 
         LongestCommonSubsequence lcs = new LongestCommonSubsequence();
 
         @Override
-        public double similarity(String s1, String s2) {
+        public double distance(String s1, String s2) {
             double distance = lcs.distance(s1, s2);
             return distance / Math.max(s1.length(), s2.length());
         }
+
+        @Override
+        public double similarity(String s1, String s2) {
+            return 1 - distance(s1, s2);
+        }
+
     }
 }
