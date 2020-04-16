@@ -14,20 +14,20 @@ The plugin currently supports these algorithms.  See the above library for more 
 Matcher | Algorithm | Type | Normalized?
 ---|---|---|---
 cosine-similarity | Cosine | similarity | yes
+dice-similarity | Sorensen-Dice | similarity | yes
+jaccard-similarity | Jaccard | similarity | yes
+jaro-winkler-similarity | Jaro-Winkler | similarity | yes
+normalized-lcs-similarity | Normalized Longest Common Subsequence | similarity | yes
+normalized-levenshtein-similarity | Normalized Levenshtein | similarity | yes
 cosine-distance | Cosine | distance | yes
 damerau-levenshtein | Damerau-Levenshtein | distance | no
-dice-similarity | Sorensen-Dice | similarity | yes
 dice-distance | Sorensen-Dice | distance | yes
-jaccard-similarity | Jaccard | similarity | yes
 jaccard-distance | Jaccard | distance | yes
-jaro-winkler-similarity | Jaro-Winkler | similarity | yes
 jaro-winkler-distance | Jaro-Winkler | distance | yes
 longest-common-subsequence | Longest Common Subsequence | distance | no
 metric-lcs | Metric Longest Common Subsequence | distance | yes
 ngram | N-Gram | distance | yes
-normalized-lcs-similarity | Normalized Longest Common Subsequence | similarity | yes
 normalized-lcs-distance | Normalized Longest Common Subsequence | distance | yes
-normalized-levenshtein-similarity | Normalized Levenshtein | similarity | yes
 normalized-levenshtein-distance | Normalized Levenshtein | distance | yes
 optimal-string-alignment | Optimal String Alignment | distance | no
 qgram | Q-Gram | distance | no
