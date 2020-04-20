@@ -77,6 +77,12 @@ curl -X POST "localhost:9200/patients/_search?pretty=true" -H
                   "matcher": "jaro-winkler-similarity",
                   "high": 0.9,
                   "low": 0.1
+                },{
+                  "field": "family",
+                  "value": "Brock",
+                  "matcher": "jaro-winkler-similarity",
+                  "high": 0.9,
+                  "low": 0.1
                 }]
               }
             }
@@ -116,6 +122,13 @@ curl -X POST "localhost:9200/patients/_search?pretty=true" -H
                   "threshold": 0.9,
                   "m_value": 0.95736,
                   "u_value": 0.0003415
+                },{
+                  "field": "given",
+                  "value": "Brock",
+                  "matcher": "jaro-winkler-similarity",
+                  "threshold": 0.9,
+                  "m_value": 0.92873,
+                  "u_value": 0.0008731
                 }]
               }
             }
