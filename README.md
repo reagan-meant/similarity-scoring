@@ -114,7 +114,7 @@ curl -X POST "localhost:9200/patients/_search?pretty=true" -H
               "lang" : "similarity_scripts",
               "params": {
                 "score_mode": "fellegi-sunter",
-                "base_score": 100.0
+                "base_score": 100.0,
                 "matchers": [{
                   "field": "given",
                   "value": "Alis",
