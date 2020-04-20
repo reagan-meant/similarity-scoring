@@ -78,7 +78,7 @@ curl -X POST "localhost:9200/patients/_search?pretty=true" -H
   "query": {
     "function_score": {
       "query": {
-        "match_all": {}
+        "match": { "gender": "female" } // blocks can go here
       },
       "functions": [
         {
@@ -101,7 +101,9 @@ curl -X POST "localhost:9200/patients/_search?pretty=true" -H
             }
           }
         }
-      ]
+      ],
+      "min_score": 100, // based on the base_score above so can be higher to limit results
+      "boost_mode": "replace" // required so blocks don't affect the score
     }
   }
 }'

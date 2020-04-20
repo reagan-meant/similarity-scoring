@@ -4,7 +4,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'org.elasticsearch.gradle:build-tools:7.6.1'
+        classpath 'org.elasticsearch.gradle:build-tools:7.6.2'
     }
 }
 
@@ -27,7 +27,7 @@ java {
 }
 
 group = 'org.intrahealth'
-version = '0.0.3-es7.6.1-SNAPSHOT'
+version = '0.0.3-es7.6.2'
 
 esplugin {
     name 'string-similarity-scoring'
