@@ -219,7 +219,7 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
                         for (MatcherModel matcherModel : matchers) {
                             String value = String.valueOf(lookup.source().get(matcherModel.fieldName));
                             double score = matcherService.matchScore(matcherModel.matcherName, matcherModel.value, value);
-                            totalScore = totalScore * score;
+                            totalScore = totalScore * score * matcherModel.weight;
                         }
                         return totalScore;
                     }
@@ -236,7 +236,7 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
                         for (MatcherModel matcherModel : matchers) {
                             String value = String.valueOf(lookup.source().get(matcherModel.fieldName));
                             double score = matcherService.matchScore(matcherModel.matcherName, matcherModel.value, value);
-                            totalScore += score;
+                            totalScore += score * matcherModel.weight;
                         }
                         return totalScore;
                     }
@@ -294,10 +294,15 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
         private double threshold;
 
         /**
+         * The weight for the field when using add or multiple score_modes.
+         */
+        private double weight;
+
+        /**
          * Constructs a new instance of a MatcherModel.
          */
         MatcherModel(String fieldName, Object value, String matcherName, double high, double low, 
-                double mValue, double uValue, double threshold) {
+                double mValue, double uValue, double threshold, double weight) {
             this.fieldName = fieldName;
             this.value = String.valueOf(value);
             this.matcherName = matcherName;
@@ -306,6 +311,7 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
             this.match = java.lang.Math.log10( mValue / uValue );
             this.unmatch = java.lang.Math.log10( (1 - mValue) / (1 - uValue) );
             this.threshold = threshold;
+            this.weight = weight;
         }
 
     }
@@ -325,6 +331,7 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
         private static String MVALUE = "m_value";
         private static String UVALUE = "u_value";
         private static String THRESHOLD = "threshold";
+        private static String WEIGHT = "weight";
 
         @SuppressWarnings("unchecked")
         public static List<MatcherModel> parseMatcherModels(Map<String, Object> params) {
@@ -337,6 +344,7 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
                 String value = String.valueOf(entry.get(VALUE));
                 String matcherName = String.valueOf(entry.get(MATCHER));
                 double high, low, mValue, uValue, threshold;
+                double weight = 1.0;
                 if ( score_mode.equals("fellegi-sunter" ) ) {
                     mValue = (double) entry.get(MVALUE);
                     uValue = (double) entry.get(UVALUE);
@@ -346,10 +354,13 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
                     high = (double) entry.get(HIGH);
                     low = (double) entry.get(LOW);
                     mValue = uValue = threshold = 0.0;
-                } else { // multiply and add don't need any extra parameters
+                } else { // multiply and add have the weight option
                     high = low = mValue = uValue = threshold = 0.0;
+                    if ( entry.containsKey(WEIGHT) ) {
+                        weight = (double) entry.get(WEIGHT);
+                    }
                 }
-                matcherModels.add(new MatcherModel(fieldName, value, matcherName, high, low, mValue, uValue, threshold));
+                matcherModels.add(new MatcherModel(fieldName, value, matcherName, high, low, mValue, uValue, threshold, weight));
             });
             return matcherModels;
         }

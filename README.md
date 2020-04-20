@@ -142,6 +142,47 @@ curl -X POST "localhost:9200/patients/_search?pretty=true" -H
 }'
 ```
 
+If you want to use a deterministic scoring method, you can set the score_mode to add or
+multiply depending on how you want to combine the scores for multiple fields.  You can
+also assign a weight for individual fields which will be multiplied with the returned score
+for the matcher.
+
+```bash
+curl -X POST "localhost:9200/patients/_search?pretty=true" -H
+'Content-Type: application/json' -d'{
+  "query": {
+    "function_score": {
+      "query": { "match_all": {} },
+      "functions": [
+        {
+          "script_score": {
+            "script": {
+              "source": "string_similarity",
+              "lang" : "similarity_scripts",
+              "params": {
+                "score_mode": "add",
+                "matchers": [{
+                  "field": "given",
+                  "value": "Alis",
+                  "matcher": "jaro-winkler-similarity"
+                },{
+                  "field": "family",
+                  "value": "Brock",
+                  "matcher": "jaro-winkler-similarity",
+                  "weight": 2.0
+                }]
+              }
+            }
+          }
+        }
+      ],
+      "min_score": 1, // based on the base_score above so can be higher to limit results
+      "boost_mode": "replace" // required so blocks don't affect the score
+    }
+  }
+}'
+```
+
 
 The matchers key contains an array of all fields to be searched, configured with the
 appropriate field name, value, algorithm, score_mode and additional parameters based on the score_mode.
@@ -157,3 +198,4 @@ low | The score to be assigned to a string that does not match the search term a
 threshold | The threshold for the field being a match for the fellegi-sunter score_mode.
 m_value | The *m* value for the field for the fellegi-sunter score_mode.
 u_value | The *u* value for the field for the fellegi-sunter score_mode.
+weight | A double value that will be multiplied with the returned score for the matcher when using score_mode of add or multiply.  The default is 1.0.  Between 0.0 and 1.0 will reduce the score and anyting above will increase the score.
