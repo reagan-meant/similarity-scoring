@@ -133,10 +133,10 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
                 throw new IllegalArgumentException("Missing parameter [score_mode]");
             }
             String score_mode = String.valueOf(params.get("score_mode"));
-            ArrayList<String> validMethods = new ArrayList<String>( Arrays.asList( "fellegi-sunter", "bayes", "multiply", "add" ) );
+            ArrayList<String> validMethods = new ArrayList<String>( Arrays.asList( "fellegi-sunter", "bayes", "multiply", "sum" ) );
             if ( !validMethods.contains( score_mode ) ) {
                 throw new IllegalArgumentException(
-                        "Invalid parameter. Method can only be: fellegi-sunter, bayes, multiply or add. Method is " 
+                        "Invalid parameter. Method can only be: fellegi-sunter, bayes, multiply or sum. Method is " 
                         + score_mode );
             }
             if (score_mode.equals("fellegi-sunter") && params.containsKey("base_score") == false) {
@@ -219,6 +219,14 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
                         for (MatcherModel matcherModel : matchers) {
                             String value = String.valueOf(lookup.source().get(matcherModel.fieldName));
                             double score = matcherService.matchScore(matcherModel.matcherName, matcherModel.value, value);
+                            if ( matcherModel.threshold != 0.0 ) {
+                                if ( matcherService.isDistance(matcherModel.matcherName) 
+                                    ? score <= matcherModel.threshold : score >= matcherModel.threshold ) {
+                                    score = 1.0;
+                                } else {
+                                    score = 0.0;
+                                }
+                            }
                             totalScore = totalScore * score * matcherModel.weight;
                         }
                         return totalScore;
@@ -226,7 +234,7 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
 
                 };
 
-             } else { // default to add if nothing is set
+             } else { // default to sum if nothing is set
 
                 return new ScoreScript(params, lookup, ctx) {
 
@@ -236,6 +244,14 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
                         for (MatcherModel matcherModel : matchers) {
                             String value = String.valueOf(lookup.source().get(matcherModel.fieldName));
                             double score = matcherService.matchScore(matcherModel.matcherName, matcherModel.value, value);
+                            if ( matcherModel.threshold != 0.0 ) {
+                                if ( matcherService.isDistance(matcherModel.matcherName) 
+                                    ? score <= matcherModel.threshold : score >= matcherModel.threshold ) {
+                                    score = 1.0;
+                                } else {
+                                    score = 0.0;
+                                }
+                            }
                             totalScore += score * matcherModel.weight;
                         }
                         return totalScore;
@@ -294,7 +310,7 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
         private double threshold;
 
         /**
-         * The weight for the field when using add or multiple score_modes.
+         * The weight for the field when using sum or multiple score_modes.
          */
         private double weight;
 
@@ -354,10 +370,13 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
                     high = (double) entry.get(HIGH);
                     low = (double) entry.get(LOW);
                     mValue = uValue = threshold = 0.0;
-                } else { // multiply and add have the weight option
+                } else { // multiply and sum have the weight option
                     high = low = mValue = uValue = threshold = 0.0;
                     if ( entry.containsKey(WEIGHT) ) {
                         weight = (double) entry.get(WEIGHT);
+                    }
+                    if ( entry.containsKey(THRESHOLD) ) {
+                        threshold = (double) entry.get(THRESHOLD);
                     }
                 }
                 matcherModels.add(new MatcherModel(fieldName, value, matcherName, high, low, mValue, uValue, threshold, weight));

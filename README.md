@@ -142,7 +142,7 @@ curl -X POST "localhost:9200/patients/_search?pretty=true" -H
 }'
 ```
 
-If you want to use a deterministic scoring method, you can set the score_mode to add or
+If you want to use a deterministic scoring method, you can set the score_mode to sum or
 multiply depending on how you want to combine the scores for multiple fields.  You can
 also assign a weight for individual fields which will be multiplied with the returned score
 for the matcher.
@@ -160,7 +160,7 @@ curl -X POST "localhost:9200/patients/_search?pretty=true" -H
               "source": "string_similarity",
               "lang" : "similarity_scripts",
               "params": {
-                "score_mode": "add",
+                "score_mode": "sum",
                 "matchers": [{
                   "field": "given",
                   "value": "Alis",
@@ -168,7 +168,8 @@ curl -X POST "localhost:9200/patients/_search?pretty=true" -H
                 },{
                   "field": "family",
                   "value": "Brock",
-                  "matcher": "jaro-winkler-similarity",
+                  "matcher": "damerau-levenshtein",
+                  "threshold": 2.0,
                   "weight": 2.0
                 }]
               }
@@ -192,10 +193,10 @@ Parameter | Description
 field | The field to be searched e.g. "given".
 value | The search term e.g. "Alis".
 matcher | The algorithm to use for matching e.g. "jaro-winkler-similarity".
-score_mode | How to combine scores for multiple matchers/fields.  The options are:  fellegi-sunter, bayes, multiply, or add.
+score_mode | How to combine scores for multiple matchers/fields.  The options are:  fellegi-sunter, bayes, multiply, or sum.
 high | The score to be assigned to a string that matches the search term perfectly.  Applies to the bayes score_mode.
 low | The score to be assigned to a string that does not match the search term at all.  Applies to the bayes score_mode.
-threshold | The threshold for the field being a match for the fellegi-sunter score_mode.
+threshold | A double value threshold for the field being a matched for the fellegi-sunter, multiply, or sum score_mode. When used with multiply or sum the score returned will be 1 or 0 if it met the treshold or not.  You can use weight to adjust this if necessary.  This is so you can use distance algorithms when a high returned value is less of a match.  Distance algorithms must be <= the threshold and similarity must be >= the threshold.
 m_value | The *m* value for the field for the fellegi-sunter score_mode.
 u_value | The *u* value for the field for the fellegi-sunter score_mode.
-weight | A double value that will be multiplied with the returned score for the matcher when using score_mode of add or multiply.  The default is 1.0.  Between 0.0 and 1.0 will reduce the score and anyting above will increase the score.
+weight | A double value that will be multiplied with the returned score for the matcher when using score_mode of sum or multiply.  The default is 1.0.  Between 0.0 and 1.0 will reduce the score and anyting above will increase the score.
