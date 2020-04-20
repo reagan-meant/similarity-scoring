@@ -123,7 +123,7 @@ curl -X POST "localhost:9200/patients/_search?pretty=true" -H
                   "m_value": 0.95736,
                   "u_value": 0.0003415
                 },{
-                  "field": "given",
+                  "field": "family",
                   "value": "Brock",
                   "matcher": "jaro-winkler-similarity",
                   "threshold": 0.9,
