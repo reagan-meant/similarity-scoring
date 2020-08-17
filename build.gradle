@@ -27,7 +27,7 @@ java {
 }
 
 group = 'org.intrahealth'
-version = '0.0.5-es7.6.2'
+version = '0.0.6-es7.6.2'
 
 esplugin {
     name 'string-similarity-scoring'

@@ -158,18 +158,38 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
             String score_mode = String.valueOf(params.get("score_mode"));
             if ( score_mode.equals( "fellegi-sunter" ) ) {
 
+                double base_score = Double.parseDouble( String.valueOf( params.get("base_score") ) );
                 return new ScoreScript(params, lookup, ctx) {
                     @Override
                     public double execute(ExplanationHolder explanation) {
-                        double totalScore = (double) params.get("base_score");
+                        double totalScore = base_score;
                         for (MatcherModel matcherModel : matchers) {
                             String value = String.valueOf(lookup.source().get(matcherModel.fieldName));
-                            double score = matcherService.matchScore(matcherModel.matcherName, matcherModel.value, value);
-                            if ( matcherService.isDistance(matcherModel.matcherName) 
-                                    ? score <= matcherModel.threshold : score >= matcherModel.threshold ) {
-                                totalScore += matcherModel.match;
+                            String nullHandling = "";
+                            if ( value.equals("") && matcherModel.value.equals("") ) {
+                              if ( matcherModel.nullHandlingBoth.equals("") ) {
+                                nullHandling = matcherModel.nullHandling;
+                              } else {
+                                nullHandling = matcherModel.nullHandlingBoth;
+                              }
+                            } else if ( value.equals("") || matcherModel.value.equals("") ) {
+                              nullHandling = matcherModel.nullHandling;
+                            }
+                            if ( nullHandling.equals("conservative") ) {
+                              totalScore += matcherModel.unmatch;
+                            } else if ( nullHandling.equals("greedy") ) {
+                              totalScore += matcherModel.match;
+                            } else if ( nullHandling.equals("moderate") ) {
+                              // No change to score if moderate
+                              //totalScore += 0.0;
                             } else {
-                                totalScore += matcherModel.unmatch;
+                                double score = matcherService.matchScore(matcherModel.matcherName, matcherModel.value, value);
+                                if ( matcherService.isDistance(matcherModel.matcherName) 
+                                    ? score <= matcherModel.threshold : score >= matcherModel.threshold ) {
+                                    totalScore += matcherModel.match;
+                                } else {
+                                    totalScore += matcherModel.unmatch;
+                                }
                             }
                         }
                         return totalScore;
@@ -185,14 +205,41 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
                         double totalScore = NOT_SCORED;
                         for (MatcherModel matcherModel : matchers) {
                             String value = String.valueOf(lookup.source().get(matcherModel.fieldName));
-                            double score = matcherService.matchScore(matcherModel.matcherName, matcherModel.value, value);
-                            if (score > matcherModel.high) {
-                                score = matcherModel.high;
+                            boolean noScore = false;
+                            String nullHandling = "";
+
+                            if ( value.equals("") && matcherModel.value.equals("") ) {
+                              if ( matcherModel.nullHandlingBoth.equals("") ) {
+                                nullHandling = matcherModel.nullHandling;
+                              } else {
+                                nullHandling = matcherModel.nullHandlingBoth;
+                              }
+                            } else if ( value.equals("") || matcherModel.value.equals("") ) {
+                              nullHandling = matcherModel.nullHandling;
                             }
-                            if (score < matcherModel.low) {
+
+                            double score;
+                            if ( nullHandling.equals("conservative") ) {
                                 score = matcherModel.low;
+                            } else if ( nullHandling.equals("greedy") ) {
+                                score = matcherModel.high;
+                            } else if ( nullHandling.equals("moderate") ) {
+                                // No change to score if moderate
+                                //totalScore += 0.0;
+                                noScore = true;
+                                score = 0.0;
+                            } else {
+                                score = matcherService.matchScore(matcherModel.matcherName, matcherModel.value, value);
+                                if (score > matcherModel.high) {
+                                    score = matcherModel.high;
+                                }
+                                if (score < matcherModel.low) {
+                                    score = matcherModel.low;
+                                }
                             }
-                            totalScore = totalScore == NOT_SCORED ? score : combineScores(totalScore, score);
+                            if ( !noScore ) {
+                                totalScore = totalScore == NOT_SCORED ? score : combineScores(totalScore, score);
+                            }
                         }
                         return totalScore;
                     }
@@ -218,16 +265,44 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
                         double totalScore = 1.0;
                         for (MatcherModel matcherModel : matchers) {
                             String value = String.valueOf(lookup.source().get(matcherModel.fieldName));
-                            double score = matcherService.matchScore(matcherModel.matcherName, matcherModel.value, value);
-                            if ( matcherModel.threshold != 0.0 ) {
-                                if ( matcherService.isDistance(matcherModel.matcherName) 
-                                    ? score <= matcherModel.threshold : score >= matcherModel.threshold ) {
-                                    score = 1.0;
-                                } else {
-                                    score = 0.0;
+                            boolean noScore = false;
+                            String nullHandling = "";
+
+                            if ( value.equals("") && matcherModel.value.equals("") ) {
+                              if ( matcherModel.nullHandlingBoth.equals("") ) {
+                                nullHandling = matcherModel.nullHandling;
+                              } else {
+                                nullHandling = matcherModel.nullHandlingBoth;
+                              }
+                            } else if ( value.equals("") || matcherModel.value.equals("") ) {
+                              nullHandling = matcherModel.nullHandling;
+                            }
+
+                            double score;
+                            if ( nullHandling.equals("conservative") ) {
+                                score = 0.0;
+                            } else if ( nullHandling.equals("greedy") ) {
+                                // This result will be a bit odd without a threshold set
+                                score = 1.0;
+                            } else if ( nullHandling.equals("moderate") ) {
+                                // No change to score if moderate
+                                //totalScore += 0.0;
+                                noScore = true;
+                                score = 0.0;
+                            } else {
+                                score = matcherService.matchScore(matcherModel.matcherName, matcherModel.value, value);
+                                if ( matcherModel.threshold != 0.0 ) {
+                                    if ( matcherService.isDistance(matcherModel.matcherName) 
+                                        ? score <= matcherModel.threshold : score >= matcherModel.threshold ) {
+                                        score = 1.0;
+                                    } else {
+                                        score = 0.0;
+                                    }
                                 }
                             }
-                            totalScore = totalScore * score * matcherModel.weight;
+                            if ( !noScore ) {
+                                totalScore = totalScore * score * matcherModel.weight;
+                            }
                         }
                         return totalScore;
                     }
@@ -243,13 +318,37 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
                         double totalScore = 0.0;
                         for (MatcherModel matcherModel : matchers) {
                             String value = String.valueOf(lookup.source().get(matcherModel.fieldName));
-                            double score = matcherService.matchScore(matcherModel.matcherName, matcherModel.value, value);
-                            if ( matcherModel.threshold != 0.0 ) {
-                                if ( matcherService.isDistance(matcherModel.matcherName) 
-                                    ? score <= matcherModel.threshold : score >= matcherModel.threshold ) {
-                                    score = 1.0;
-                                } else {
-                                    score = 0.0;
+                            String nullHandling = "";
+
+                            if ( value.equals("") && matcherModel.value.equals("") ) {
+                              if ( matcherModel.nullHandlingBoth.equals("") ) {
+                                nullHandling = matcherModel.nullHandling;
+                              } else {
+                                nullHandling = matcherModel.nullHandlingBoth;
+                              }
+                            } else if ( value.equals("") || matcherModel.value.equals("") ) {
+                              nullHandling = matcherModel.nullHandling;
+                            }
+
+                            double score;
+                            if ( nullHandling.equals("conservative") ) {
+                                score = 0.0;
+                            } else if ( nullHandling.equals("greedy") ) {
+                                // This result will be a bit odd without a threshold set
+                                score = 1.0;
+                            } else if ( nullHandling.equals("moderate") ) {
+                                // Same as conservative when doing sum
+                                //totalScore += 0.0;
+                                score = 0.0;
+                            } else {
+                                score = matcherService.matchScore(matcherModel.matcherName, matcherModel.value, value);
+                                if ( matcherModel.threshold != 0.0 ) {
+                                    if ( matcherService.isDistance(matcherModel.matcherName) 
+                                        ? score <= matcherModel.threshold : score >= matcherModel.threshold ) {
+                                        score = 1.0;
+                                    } else {
+                                        score = 0.0;
+                                    }
                                 }
                             }
                             totalScore += score * matcherModel.weight;
@@ -315,10 +414,21 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
         private double weight;
 
         /**
+         * The name of the matcher to use for matching.
+         */
+        private String nullHandling;
+
+        /**
+         * The name of the matcher to use for matching.
+         */
+        private String nullHandlingBoth;
+
+        /**
          * Constructs a new instance of a MatcherModel.
          */
         MatcherModel(String fieldName, Object value, String matcherName, double high, double low, 
-                double mValue, double uValue, double threshold, double weight) {
+                double mValue, double uValue, double threshold, double weight, 
+                String nullHandling, String nullHandlingBoth) {
             this.fieldName = fieldName;
             this.value = String.valueOf(value);
             this.matcherName = matcherName;
@@ -328,6 +438,8 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
             this.unmatch = java.lang.Math.log10( (1 - mValue) / (1 - uValue) );
             this.threshold = threshold;
             this.weight = weight;
+            this.nullHandling = nullHandling;
+            this.nullHandlingBoth = nullHandlingBoth;
         }
 
     }
@@ -348,6 +460,9 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
         private static String UVALUE = "u_value";
         private static String THRESHOLD = "threshold";
         private static String WEIGHT = "weight";
+        /* For null value handling */
+        private static String NULL_HANDLING = "null_handling";
+        private static String NULL_HANDLING_BOTH = "null_handling_both";
 
         @SuppressWarnings("unchecked")
         public static List<MatcherModel> parseMatcherModels(Map<String, Object> params) {
@@ -359,27 +474,36 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
                 String fieldName = String.valueOf(entry.get(FIELD));
                 String value = String.valueOf(entry.get(VALUE));
                 String matcherName = String.valueOf(entry.get(MATCHER));
+                String nullHandling = "off";
+                String nullHandlingBoth = "";
+                if ( entry.containsKey(NULL_HANDLING) ) {
+                    nullHandling = String.valueOf(entry.get(NULL_HANDLING));
+                    if ( entry.containsKey(NULL_HANDLING_BOTH) ) {
+                        nullHandlingBoth = String.valueOf(entry.get(NULL_HANDLING_BOTH));
+                    }
+                }
                 double high, low, mValue, uValue, threshold;
                 double weight = 1.0;
                 if ( score_mode.equals("fellegi-sunter" ) ) {
-                    mValue = (double) entry.get(MVALUE);
-                    uValue = (double) entry.get(UVALUE);
-                    threshold = (double) entry.get(THRESHOLD);
+                    mValue = Double.parseDouble( String.valueOf( entry.get(MVALUE) ) );
+                    uValue = Double.parseDouble( String.valueOf( entry.get(UVALUE) ) );
+                    threshold = Double.parseDouble( String.valueOf( entry.get(THRESHOLD) ) );
                     high = low = 0.0;
                 } else if ( score_mode.equals("bayes") ) { 
-                    high = (double) entry.get(HIGH);
-                    low = (double) entry.get(LOW);
+                    high = Double.parseDouble( String.valueOf( entry.get(HIGH) ) );
+                    low = Double.parseDouble( String.valueOf( entry.get(LOW) ) );
                     mValue = uValue = threshold = 0.0;
                 } else { // multiply and sum have the weight option
                     high = low = mValue = uValue = threshold = 0.0;
                     if ( entry.containsKey(WEIGHT) ) {
-                        weight = (double) entry.get(WEIGHT);
+                        weight = Double.parseDouble( String.valueOf( entry.get(WEIGHT) ) );
                     }
                     if ( entry.containsKey(THRESHOLD) ) {
-                        threshold = (double) entry.get(THRESHOLD);
+                        threshold = Double.parseDouble( String.valueOf( entry.get(THRESHOLD) ) );
                     }
                 }
-                matcherModels.add(new MatcherModel(fieldName, value, matcherName, high, low, mValue, uValue, threshold, weight));
+                matcherModels.add(new MatcherModel(fieldName, value, matcherName, high, low, mValue, uValue, 
+                      threshold, weight, nullHandling, nullHandlingBoth));
             });
             return matcherModels;
         }
