@@ -4,7 +4,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'org.elasticsearch.gradle:build-tools:7.6.2'
+        classpath 'org.elasticsearch.gradle:build-tools:7.8.1'
     }
 }
 
@@ -27,7 +27,7 @@ java {
 }
 
 group = 'org.intrahealth'
-version = '0.0.6-es7.6.2'
+version = '0.0.6-es7.8.1'
 
 esplugin {
     name 'string-similarity-scoring'
@@ -40,6 +40,10 @@ esplugin {
 test.enabled = false
 dependencyLicenses.enabled = false
 loggerUsageCheck.enabled = false //disable because only works with java 1.8 and below
+validateNebulaPom.enabled = false
+
+integTest.enabled = false
+testingConventions.enabled = false
 
 dependencies {
     compile 'info.debatty:java-string-similarity:1.2.1'
