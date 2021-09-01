@@ -46,7 +46,7 @@ procedure. Make sure that you are inside elasticsearch before running the instal
 
 ```bash
 cd path-to-elasticsearch
-bin/elasticsearch-plugin install file://path-to-plugin-zip-file
+bin/elasticsearch-plugin install file:///path/to/plugin/zip/file
 systemctl restart elasticesearch
 ```
 
