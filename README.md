@@ -42,10 +42,11 @@ The plugin can be built with Java 13 with the following command:
 
 ## Installation
 The plugin installation may be installed using the standard Elasticsearch installation
-procedure.
+procedure. Make sure that you are inside elasticsearch before running the install command
 
 ```bash
-elasticsearch-plugin install file://path-to-plugin-zip-file
+cd path-to-elasticsearch
+bin/elasticsearch-plugin install file://path-to-plugin-zip-file
 systemctl restart elasticesearch
 ```
 
