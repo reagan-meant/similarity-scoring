@@ -189,6 +189,10 @@ public class MatcherService {
                 disMatcher = new Damerau();
                 matchers.put(matcherName, new StringComparisonMatcher(disMatcher));
                 break;
+            case "DateDamerau":
+                disMatcher = new DateDamerau();
+                matchers.put(matcherName, new StringComparisonMatcher(disMatcher));
+                break;                     
             case "optimal-string-alignment":
                 disMatcher = new OptimalStringAlignment();
                 matchers.put(matcherName, new StringComparisonMatcher(disMatcher));
