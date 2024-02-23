@@ -171,13 +171,13 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
                         for (MatcherModel matcherModel : matchers) {
                             String value = String.valueOf(lookup.source().get(matcherModel.fieldName));
                             String nullHandling = "";
-                            if ( value.equals("") && matcherModel.value.equals("") ) {
+                            if ( value.trim().isEmpty() && matcherModel.value.trim().isEmpty() ) {
                               if ( matcherModel.nullHandlingBoth.equals("") ) {
                                 nullHandling = matcherModel.nullHandling;
                               } else {
                                 nullHandling = matcherModel.nullHandlingBoth;
                               }
-                            } else if ( value.equals("") || matcherModel.value.equals("") ) {
+                            } else if ( value.trim().isEmpty() || matcherModel.value.trim().isEmpty() ) {
                               nullHandling = matcherModel.nullHandling;
                             }
                             if ( nullHandling.equals("conservative") ) {
@@ -213,13 +213,13 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
                             boolean noScore = false;
                             String nullHandling = "";
 
-                            if ( value.equals("") && matcherModel.value.equals("") ) {
+                            if ( value.trim().isEmpty() && matcherModel.value.trim().isEmpty() ) {
                               if ( matcherModel.nullHandlingBoth.equals("") ) {
                                 nullHandling = matcherModel.nullHandling;
                               } else {
                                 nullHandling = matcherModel.nullHandlingBoth;
                               }
-                            } else if ( value.equals("") || matcherModel.value.equals("") ) {
+                            } else if ( value.trim().isEmpty() || matcherModel.value.trim().isEmpty() ) {
                               nullHandling = matcherModel.nullHandling;
                             }
 
@@ -273,13 +273,13 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
                             boolean noScore = false;
                             String nullHandling = "";
 
-                            if ( value.equals("") && matcherModel.value.equals("") ) {
+                            if ( value.trim().isEmpty() && matcherModel.value.trim().isEmpty() ) {
                               if ( matcherModel.nullHandlingBoth.equals("") ) {
                                 nullHandling = matcherModel.nullHandling;
                               } else {
                                 nullHandling = matcherModel.nullHandlingBoth;
                               }
-                            } else if ( value.equals("") || matcherModel.value.equals("") ) {
+                            } else if ( value.trim().isEmpty() || matcherModel.value.trim().isEmpty() ) {
                               nullHandling = matcherModel.nullHandling;
                             }
 
@@ -325,13 +325,13 @@ public class SimilarityScoringPlugin extends Plugin implements ScriptPlugin {
                             String value = String.valueOf(lookup.source().get(matcherModel.fieldName));
                             String nullHandling = "";
 
-                            if ( value.equals("") && matcherModel.value.equals("") ) {
+                            if ( value.trim().isEmpty() && matcherModel.value.trim().isEmpty() ) {
                               if ( matcherModel.nullHandlingBoth.equals("") ) {
                                 nullHandling = matcherModel.nullHandling;
                               } else {
                                 nullHandling = matcherModel.nullHandlingBoth;
                               }
-                            } else if ( value.equals("") || matcherModel.value.equals("") ) {
+                            } else if ( value.trim().isEmpty() || matcherModel.value.trim().isEmpty() ) {
                               nullHandling = matcherModel.nullHandling;
                             }
 
