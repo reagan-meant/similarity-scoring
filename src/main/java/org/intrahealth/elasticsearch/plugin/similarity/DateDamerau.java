@@ -19,12 +19,9 @@
 package org.intrahealth.elasticsearch.plugin.similarity;
 
 import info.debatty.java.stringsimilarity.interfaces.NormalizedStringSimilarity;
-//import info.debatty.java.stringsimilarity.interfaces.NormalizedStringDistance;
-
 import net.jcip.annotations.Immutable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.logging.Logger;
 
 @Immutable
 public class DateDamerau implements NormalizedStringSimilarity {
