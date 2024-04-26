@@ -136,6 +136,7 @@ public class MatcherService {
             case "jaro-winkler-similarity":
             case "normalized-levenshtein-similarity":
             case "normalized-lcs-similarity":
+            case "dateDamerau":
                 return true;
             default:
                 return false;
@@ -189,9 +190,9 @@ public class MatcherService {
                 disMatcher = new Damerau();
                 matchers.put(matcherName, new StringComparisonMatcher(disMatcher));
                 break;
-            case "DateDamerau":
-                disMatcher = new DateDamerau();
-                matchers.put(matcherName, new StringComparisonMatcher(disMatcher));
+            case "dateDamerau":
+                simMatcher = new DateDamerau();
+                matchers.put(matcherName, new StringComparisonMatcher(simMatcher));
                 break;                     
             case "optimal-string-alignment":
                 disMatcher = new OptimalStringAlignment();

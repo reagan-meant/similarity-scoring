@@ -19,6 +19,7 @@ jaccard-similarity | Jaccard | similarity | yes
 jaro-winkler-similarity | Jaro-Winkler | similarity | yes
 normalized-lcs-similarity | Normalized Longest Common Subsequence | similarity | yes
 normalized-levenshtein-similarity | Normalized Levenshtein | similarity | yes
+dateDamerau | DateDamerau | similarity | yes
 cosine-distance | Cosine | distance | yes
 damerau-levenshtein | Damerau-Levenshtein | distance | no
 dice-distance | Sorensen-Dice | distance | yes
@@ -201,3 +202,6 @@ threshold | A double value threshold for the field being a matched for the felle
 m_value | The *m* value for the field for the fellegi-sunter score_mode.
 u_value | The *u* value for the field for the fellegi-sunter score_mode.
 weight | A double value that will be multiplied with the returned score for the matcher when using score_mode of sum or multiply.  The default is 1.0.  Between 0.0 and 1.0 will reduce the score and anyting above will increase the score.
+
+## Datedamerau sheet
+[Download Excel sheet for Datedamerau](https://github.com/reagan-meant/similarity-scoring/blob/DateDemareuE/Fuzzy%20date%20algorithm%20NBK%202023-10-04.xlsm)
